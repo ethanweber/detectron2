@@ -211,3 +211,25 @@ register_all_coco()
 register_all_lvis()
 register_all_cityscapes()
 register_all_pascal_voc()
+
+# register custom datasets
+register_coco_instances(
+    "xview_instance_segmentation_dataset_train", 
+    {}, 
+    "xview_instance_segmentation_dataset_train.json", 
+    "/home/ethanweber/Documents/xview/data/train/images")
+register_coco_instances(
+    "xview_instance_segmentation_dataset_val", 
+    {}, 
+    "xview_instance_segmentation_dataset_val.json", 
+    "/home/ethanweber/Documents/xview/data/train/images")
+register_coco_instances(
+    "xview_semantic_segmentation_dataset_train", 
+    {}, 
+    "xview_semantic_segmentation_dataset_train.json", 
+    "/home/ethanweber/Documents/xview/data/train/images")
+register_coco_instances(
+    "xview_semantic_segmentation_dataset_val", 
+    {}, 
+    "xview_semantic_segmentation_dataset_val.json", 
+    "/home/ethanweber/Documents/xview/data/train/images")

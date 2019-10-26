@@ -245,23 +245,29 @@ def pairwise_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
     Returns:
         Tensor: IoU, sized [N,M].
     """
-    area1 = boxes1.area()
     area2 = boxes2.area()
 
-    boxes1, boxes2 = boxes1.tensor, boxes2.tensor
+    boxes1_tensor, boxes2_tensor = boxes1.tensor, boxes2.tensor
 
-    lt = torch.max(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
-    rb = torch.min(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+    lt = torch.max(boxes1_tensor[:, None, :2], boxes2_tensor[:, :2])  # [N,M,2]
+    rb = torch.min(boxes1_tensor[:, None, 2:], boxes2_tensor[:, 2:])  # [N,M,2]
 
-    wh = (rb - lt).clamp(min=0)  # [N,M,2]
-    inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
+    N = int(len(boxes1))
+    M = int(len(boxes2))
+    iou = torch.zeros([N,M]).to(boxes1.device)
 
-    # handle empty boxes
-    iou = torch.where(
-        inter > 0,
-        inter / (area1[:, None] + area2 - inter),
-        torch.zeros(1, dtype=inter.dtype, device=inter.device),
-    )
+    for i in range(0, N, 20):
+        area1 = boxes1[i:min(i+20, N)].area()
+
+        wh = (rb[i:min(i+20, N), :] - lt[i:min(i+20, N), :]).clamp(min=0)  # [<=20,M,2]
+        inter = wh[:, :, 0] * wh[:, :, 1]  # [<=20,M]
+
+        # handle empty boxes
+        iou[i:min(i+20, N), :] = torch.where(
+            inter > 0,
+            inter / (area1[:, None] + area2 - inter),
+            torch.zeros(1, dtype=inter.dtype, device=inter.device),
+        )
     return iou
 
 

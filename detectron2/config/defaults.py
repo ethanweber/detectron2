@@ -106,7 +106,7 @@ _C.DATALOADER.NUM_WORKERS = 4
 # If True, each batch should contain only images for which the aspect ratio
 # is compatible. This groups portrait images together, and landscape images
 # are not batched with portrait images.
-_C.DATALOADER.ASPECT_RATIO_GROUPING = True
+_C.DATALOADER.ASPECT_RATIO_GROUPING = False
 # Options: TrainingSampler, RepeatFactorTrainingSampler
 _C.DATALOADER.SAMPLER_TRAIN = "TrainingSampler"
 # Repeat threshold for RepeatFactorTrainingSampler
