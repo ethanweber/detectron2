@@ -233,3 +233,4 @@ register_coco_instances(
     {}, 
     "xview_semantic_segmentation_dataset_val.json", 
     "/home/ethanweber/Documents/xview/data/train/images")
+    
