@@ -67,7 +67,7 @@ class XviewEvaluator(DatasetEvaluator):
             anns = self._coco_api.loadAnns(ann_ids)
             file_name, height, width, this_image_id = [img[i] for i in img.keys()]
             assert(image_id == this_image_id)
-            image = get_xview_gt_image(file_name, height, width, image_id, anns)
+            image = get_xview_localization_gt_image(file_name, height, width, image_id, anns)
             cv2.imwrite(os.path.join(self._TARG_DIR, file_name), image)
 
             # WRITE THE PREDICTION IMAGE
@@ -98,19 +98,19 @@ class XviewEvaluator(DatasetEvaluator):
             # TODO: add a threshold for the results.
             # TODO: check if output already has thresholded values. probably does?
             assert("instances" in output)
-            pred_image = np.zeros((height, width), 'uint8')
-            for instance in prediction["instances"]:
-                rle = [instance["segmentation"]]
-                # TODO: add category to mask
-                mask = maskUtils.decode(rle)[:, :, 0].astype("uint8")
-                pred_image += mask
-            cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image * 255)
+            pred_image = get_xview_localization_pred_image(height, width, prediction)
+            cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image)
 
             # NOW RUN THE EVALUATION
             # TODO: figure out the correct return format
-            # return {"segm": 0}
+            # return [{"segm": 0}]
 
-def instances_to_json(instances, img_id):
+    def evaluate(self):
+        ret = OrderedDict()
+        ret["xview_results"] = {"localization": 0.0, "classification": 0.0}
+        return ret
+
+def instances_to_json(instances, img_id=None):
     num_instance = len(instances)
     if num_instance == 0:
         return []
@@ -132,11 +132,12 @@ def instances_to_json(instances, img_id):
     results = []
     for k in range(num_instance):
         result = {
-            "image_id": img_id,
             "category_id": classes[k],
             "bbox": boxes[k],
             "score": scores[k],
         }
+        if img_id:
+            result["image_id"] = img_id
         if has_mask:
             result["segmentation"] = rles[k]
         if has_keypoints:
@@ -151,8 +152,22 @@ def instances_to_json(instances, img_id):
     return results
 
 
+def get_xview_localization_pred_image(height, width, prediction):
+    pred_image = np.zeros((height, width), 'uint8')
+    for instance in prediction["instances"]:
+        rle = [instance["segmentation"]]
+        # TODO: add category to mask
+        mask = maskUtils.decode(rle)[:, :, 0].astype("uint8")
+        pred_image += mask
+        # Sometimes masks will overlap, so need to choose the best ones.
+        pred_image = np.clip(pred_image, 0, 1)
+    return pred_image
+
+def get_xview_damage_pred_image(height, width, prediction):
+    pass
+
 # https://scikit-image.org/docs/0.7.0/auto_examples/plot_shapes.html
-def get_xview_gt_image(file_name, height, width, image_id, anns, include_damage=False):
+def get_xview_localization_gt_image(file_name, height, width, image_id, anns, include_damage=False):
     """
     Return a ground truth image with the annotations.
     :param file_name:
