@@ -60,50 +60,102 @@ class XviewEvaluator(DatasetEvaluator):
         """
         for index, input, output in zip(range(len(inputs)), inputs, outputs):
 
-            # WRITE THE GROUND TRUTH IMAGE
+            # Get some initial information.
             image_id = input["image_id"]
             img = self._coco_api.loadImgs(image_id)[0]
-            ann_ids = self._coco_api.getAnnIds(imgIds=[image_id])
-            anns = self._coco_api.loadAnns(ann_ids)
             file_name, height, width, this_image_id = [img[i] for i in img.keys()]
-            assert(image_id == this_image_id)
-            image = get_xview_localization_gt_image(file_name, height, width, image_id, anns)
-            cv2.imwrite(os.path.join(self._TARG_DIR, file_name), image)
 
-            # WRITE THE PREDICTION IMAGE
-            prediction = {"image_id": input["image_id"]}
-            if "instances" in output:
-                instances = output["instances"].to(self._cpu_device)
+            # # GET NUMBER
+            # number_s = file_name[file_name.find("_") + 1:]
+            # number = number_s[:number_s.find("_")]
 
-                if instances.has("pred_masks"):
-                    # use RLE to encode the masks, because they are too large and takes memory
-                    # since this evaluator stores outputs of the entire dataset
-                    # Our model may predict bool array, but cocoapi expects uint8
-                    rles = [
-                        mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
-                        for mask in instances.pred_masks
-                    ]
-                    for rle in rles:
-                        # "counts" is an array encoded by mask_util as a byte-stream. Python3's
-                        # json writer which always produces strings cannot serialize a bytestream
-                        # unless you decode it. Thankfully, utf-8 works out (which is also what
-                        # the pycocotools/_mask.pyx does).
-                        rle["counts"] = rle["counts"].decode("utf-8")
-                    instances.pred_masks_rle = rles
-                    instances.remove("pred_masks")
+            # Decide how to process image. Either for localization or damage assessment.
+            # If this is for localization.
+            if file_name.find("pre") >= 0:
+                # WRITE THE GROUND TRUTH IMAGE
+                ann_ids = self._coco_api.getAnnIds(imgIds=[image_id])
+                anns = self._coco_api.loadAnns(ann_ids)
+                assert(image_id == this_image_id)
+                image = get_xview_localization_gt_image(file_name, height, width, image_id, anns)
+                cv2.imwrite(os.path.join(self._TARG_DIR, file_name), image)
 
-                prediction["instances"] = instances_to_json(instances, input["image_id"])
+                # WRITE THE PREDICTION IMAGE
+                prediction = {"image_id": input["image_id"]}
+                if "instances" in output:
+                    instances = output["instances"].to(self._cpu_device)
 
-            # merge instances into single image and write
-            # TODO: add a threshold for the results.
-            # TODO: check if output already has thresholded values. probably does?
-            assert("instances" in output)
-            pred_image = get_xview_localization_pred_image(height, width, prediction)
-            cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image)
+                    if instances.has("pred_masks"):
+                        # use RLE to encode the masks, because they are too large and takes memory
+                        # since this evaluator stores outputs of the entire dataset
+                        # Our model may predict bool array, but cocoapi expects uint8
+                        rles = [
+                            mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
+                            for mask in instances.pred_masks
+                        ]
+                        for rle in rles:
+                            # "counts" is an array encoded by mask_util as a byte-stream. Python3's
+                            # json writer which always produces strings cannot serialize a bytestream
+                            # unless you decode it. Thankfully, utf-8 works out (which is also what
+                            # the pycocotools/_mask.pyx does).
+                            rle["counts"] = rle["counts"].decode("utf-8")
+                        instances.pred_masks_rle = rles
+                        instances.remove("pred_masks")
 
-            # NOW RUN THE EVALUATION
-            # TODO: figure out the correct return format
-            # return [{"segm": 0}]
+                    prediction["instances"] = instances_to_json(instances, input["image_id"])
+
+                # merge instances into single image and write
+                # TODO: add a threshold for the results.
+                # TODO: check if output already has thresholded values. probably does?
+                assert("instances" in output)
+                pred_image = get_xview_localization_pred_image(height, width, prediction)
+                cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image)
+
+                # NOW RUN THE EVALUATION
+                # TODO: figure out the correct return format
+                # return [{"segm": 0}]
+            
+            # If this is for damage assessmeent.
+            else:
+                # TODO(ethan): (maybe) repeat the same process but for damage assessment
+                # pass
+                # WRITE THE GROUND TRUTH IMAGE
+                ann_ids = self._coco_api.getAnnIds(imgIds=[image_id])
+                anns = self._coco_api.loadAnns(ann_ids)
+                assert(image_id == this_image_id)
+                image = get_xview_damage_gt_image(file_name, height, width, image_id, anns)
+                cv2.imwrite(os.path.join(self._TARG_DIR, file_name), image)
+
+                # WRITE THE PREDICTION IMAGE
+                prediction = {"image_id": input["image_id"]}
+                if "instances" in output:
+                    instances = output["instances"].to(self._cpu_device)
+
+                    if instances.has("pred_masks"):
+                        # use RLE to encode the masks, because they are too large and takes memory
+                        # since this evaluator stores outputs of the entire dataset
+                        # Our model may predict bool array, but cocoapi expects uint8
+                        rles = [
+                            mask_util.encode(np.array(mask[:, :, None], order="F", dtype="uint8"))[0]
+                            for mask in instances.pred_masks
+                        ]
+                        for rle in rles:
+                            # "counts" is an array encoded by mask_util as a byte-stream. Python3's
+                            # json writer which always produces strings cannot serialize a bytestream
+                            # unless you decode it. Thankfully, utf-8 works out (which is also what
+                            # the pycocotools/_mask.pyx does).
+                            rle["counts"] = rle["counts"].decode("utf-8")
+                        instances.pred_masks_rle = rles
+                        instances.remove("pred_masks")
+
+                    prediction["instances"] = instances_to_json(instances, input["image_id"])
+
+                # merge instances into single image and write
+                # TODO: add a threshold for the results.
+                # TODO: check if output already has thresholded values. probably does?
+                assert("instances" in output)
+                pred_image = get_xview_damage_pred_image(height, width, prediction)
+                cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image)
+
 
     def evaluate(self):
         ret = OrderedDict()
@@ -164,7 +216,20 @@ def get_xview_localization_pred_image(height, width, prediction):
     return pred_image
 
 def get_xview_damage_pred_image(height, width, prediction):
-    pass
+    pred_image = np.ones((height, width), 'uint8') * 1000
+    for instance in prediction["instances"]:
+        rle = [instance["segmentation"]]
+        instance_category_id = int(instance["category_id"] + 1)
+        mask = maskUtils.decode(rle)[:, :, 0].astype("uint8") * instance_category_id
+        
+        # Nonzeros is a mask.
+        # https://stackoverflow.com/questions/7164397/find-the-min-max-excluding-zeros-in-a-numpy-array-or-a-tuple-in-python
+        nonzeros = np.nonzero(mask)
+        # Take the minimum.
+        # https://docs.scipy.org/doc/numpy/reference/generated/numpy.minimum.html
+        pred_image[nonzeros] = np.minimum(pred_image[nonzeros], mask[nonzeros])
+    pred_image[pred_image == 1000] = 0
+    return pred_image.astype("uint8")
 
 # https://scikit-image.org/docs/0.7.0/auto_examples/plot_shapes.html
 def get_xview_localization_gt_image(file_name, height, width, image_id, anns, include_damage=False):
@@ -190,3 +255,35 @@ def get_xview_localization_gt_image(file_name, height, width, image_id, anns, in
                     rr, cc = polygon(poly[:,1], poly[:,0], image.shape)
                     image[rr,cc] = 1
     return image
+
+def get_xview_damage_gt_image(file_name, height, width, image_id, anns, include_damage=False):
+    """
+    Return a ground truth image with the annotations.
+    :param file_name:
+    :param height:
+    :param width:
+    :param image_id: id from COCO dataset
+    :param anns (array of object): annotations to display
+    :return: image (np array) that can be written to file
+    """
+
+    # TODO: make this actually defined somwhere
+    # 0: "no-damage",
+    # 1: "minor-damage",
+    # 2: "major-damage",
+    # 3: "destroyed"
+    
+    # Create an image of the correct dimension.
+    # Start with all zeros to represent no building.
+    image = np.zeros((height, width), 'uint8')
+    for ann in anns:
+        if 'segmentation' in ann:
+            if type(ann['segmentation']) == list:
+                for seg in ann['segmentation']:
+                    # Round to integers.
+                    poly = np.array(seg).reshape((int(len(seg)/2), 2)).astype(int)
+                    # Initialize boolean array defining shape fill.
+                    rr, cc = polygon(poly[:,1], poly[:,0], image.shape)
+                    # https://xview2.org/challenge (+ 1 because index starts at 0 for no building)
+                    image[rr,cc] = ann['category_id'] + 1
+    return image.astype("uint8")

@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+import copy
 import numpy as np
 from enum import Enum, unique
 from typing import Iterator, List, Tuple, Union
@@ -49,7 +50,7 @@ class BoxMode(Enum):
                 4,
             ), "BoxMode.convert takes either a 4-tuple/list or a Nx4 array/tensor"
         else:
-            arr = box
+            arr = copy.deepcopy(box)  # avoid modifying the input box
 
         assert to_mode.value < 2 and from_mode.value < 2, "Relative mode not yet supported!"
 
@@ -126,7 +127,7 @@ class Boxes:
         Args:
             box_size (height, width): The clipping box's size.
         """
-        assert torch.isfinite(self.tensor).all()
+        assert torch.isfinite(self.tensor).all(), "Box tensor contains infinite or NaN!"
         h, w = box_size
         self.tensor[:, 0].clamp_(min=0, max=w)
         self.tensor[:, 1].clamp_(min=0, max=h)
@@ -201,6 +202,13 @@ class Boxes:
         """
         return (self.tensor[:, :2] + self.tensor[:, 2:]) / 2
 
+    def scale(self, scale_x: float, scale_y: float) -> None:
+        """
+        Scale the box with horizontal and vertical scaling factors
+        """
+        self.tensor[:, 0::2] *= scale_x
+        self.tensor[:, 1::2] *= scale_y
+
     @staticmethod
     def cat(boxes_list: List["Boxes"]) -> "Boxes":
         """
@@ -220,7 +228,7 @@ class Boxes:
         return cat_boxes
 
     @property
-    def device(self) -> str:
+    def device(self) -> torch.device:
         return self.tensor.device
 
     def __iter__(self) -> Iterator[torch.Tensor]:
@@ -238,10 +246,8 @@ def pairwise_iou(boxes1: Boxes, boxes2: Boxes) -> torch.Tensor:
     compute the IoU (intersection over union)
     between __all__ N x M pairs of boxes.
     The box order must be (xmin, ymin, xmax, ymax).
-
     Args:
         boxes1,boxes2 (Boxes): two `Boxes`. Contains N & M boxes, respectively.
-
     Returns:
         Tensor: IoU, sized [N,M].
     """

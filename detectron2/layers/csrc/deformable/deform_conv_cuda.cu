@@ -8,12 +8,14 @@
 // https://github.com/chengdazhi/Deformable-Convolution-V2-PyTorch/blob/mmdetection/mmdet/ops/dcn/src/deform_conv_cuda.c
 // Original license: Apache 2.0
 
-#include <torch/extension.h>
+#include <torch/types.h>
 
 #include "deform_conv.h"
 
 #include <cmath>
 #include <vector>
+
+namespace detectron2 {
 
 void deformable_im2col(
     const at::Tensor data_im,
@@ -1124,3 +1126,5 @@ void modulated_deform_conv_cuda_backward(
                                   grad_output.size(3),
                                   grad_output.size(4)});
 }
+
+} // namespace detectron2
