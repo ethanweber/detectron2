@@ -216,7 +216,7 @@ def get_xview_localization_pred_image(height, width, prediction):
     return pred_image
 
 def get_xview_damage_pred_image(height, width, prediction):
-    pred_image = np.ones((height, width), 'uint8') * 1000
+    pred_image = np.ones((height, width), 'uint8') * 200
     for instance in prediction["instances"]:
         rle = [instance["segmentation"]]
         instance_category_id = int(instance["category_id"] + 1)
@@ -228,7 +228,7 @@ def get_xview_damage_pred_image(height, width, prediction):
         # Take the minimum.
         # https://docs.scipy.org/doc/numpy/reference/generated/numpy.minimum.html
         pred_image[nonzeros] = np.minimum(pred_image[nonzeros], mask[nonzeros])
-    pred_image[pred_image == 1000] = 0
+    pred_image[pred_image == 200] = 0
     return pred_image.astype("uint8")
 
 # https://scikit-image.org/docs/0.7.0/auto_examples/plot_shapes.html
