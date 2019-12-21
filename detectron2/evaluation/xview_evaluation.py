@@ -31,7 +31,7 @@ class XviewEvaluator(DatasetEvaluator):
     Evaluate xview results.
     """
 
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name, cfg):
         self._metadata = MetadataCatalog.get(dataset_name)
         json_file = PathManager.get_local_path(self._metadata.json_file)
         with contextlib.redirect_stdout(io.StringIO()):
@@ -39,11 +39,14 @@ class XviewEvaluator(DatasetEvaluator):
         self._cpu_device = torch.device("cpu")
         self._logger = logging.getLogger(__name__)
 
-        # TODO(ethan): don't make these relative
-        # the directories to write to
-        self._PRED_DIR = "/home/ethanweber/Documents/xview/metrics/PRED_DIR"
-        self._TARG_DIR = "/home/ethanweber/Documents/xview/metrics/TARG_DIR"
-        self._OUT_FP = "/home/ethanweber/Documents/xview/metrics/OUT_FP"
+        # Make the directories if needed.
+        self._PRED_DIR = os.path.join(cfg.OUTPUT_DIR, "PRED_DIR/")
+        self._TARG_DIR = os.path.join(cfg.OUTPUT_DIR, "TARG_DIR/")
+        self._OUT_FP = os.path.join(cfg.OUTPUT_DIR, "OUT_FP.json")
+        if not os.path.exists(self._PRED_DIR):
+            os.makedirs(self._PRED_DIR)
+        if not os.path.exists(self._TARG_DIR):
+            os.makedirs(self._TARG_DIR)
 
     def reset(self):
         # TODO(ethan): delete everything at the paths where files are written
@@ -156,10 +159,14 @@ class XviewEvaluator(DatasetEvaluator):
                 pred_image = get_xview_damage_pred_image(height, width, prediction)
                 cv2.imwrite(os.path.join(self._PRED_DIR, file_name), pred_image)
 
-
     def evaluate(self):
+        # Now run the eval script.
+        os.system("python metrics/xview2_metrics.py {} {} {}".format(self._PRED_DIR, self._TARG_DIR, self._OUT_FP))
+
         ret = OrderedDict()
-        ret["xview_results"] = {"localization": 0.0, "classification": 0.0}
+        with open(self._OUT_FP, 'r') as f:
+            xview_results_dict = json.load(f)
+        ret["xview_results"] = xview_results_dict
         return ret
 
 def instances_to_json(instances, img_id=None):

@@ -60,7 +60,7 @@ class Trainer(DefaultTrainer):
         evaluator_list = []
         # TODO(ethan): maybe make this more configurable instead
         # of always adding xview evaluator
-        evaluator_list.append(XviewEvaluator(dataset_name))
+        evaluator_list.append(XviewEvaluator(dataset_name, cfg))
         evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
         if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
             evaluator_list.append(

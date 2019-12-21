@@ -218,41 +218,66 @@ register_all_pascal_voc()
 register_coco_instances(
     "xview_instance_segmentation_dataset_train", 
     {}, 
-    "xview_instance_segmentation_dataset_train.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/xview_instance_segmentation_dataset_train.json", 
+    "./data/original_train/images")
 register_coco_instances(
     "xview_instance_segmentation_dataset_val", 
     {}, 
-    "xview_instance_segmentation_dataset_val.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/xview_instance_segmentation_dataset_val.json", 
+    "./data/original_train/images")
 register_coco_instances(
-    "xview_semantic_segmentation_dataset_train", 
+    "combined_xview_instance_segmentation_dataset_train", 
     {}, 
-    "xview_semantic_segmentation_dataset_train.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/combined_xview_instance_segmentation_dataset_train.json", 
+    "./data/train/images")
 register_coco_instances(
-    "xview_semantic_segmentation_dataset_val", 
+    "combined_xview_instance_segmentation_dataset_val", 
     {}, 
-    "xview_semantic_segmentation_dataset_val.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/combined_xview_instance_segmentation_dataset_val.json", 
+    "./data/train/images")
+# register_coco_instances(
+#     "xview_semantic_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/xview_semantic_segmentation_dataset_train.json", 
+#     "./data/train/images")
+# register_coco_instances(
+#     "xview_semantic_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_semantic_segmentation_dataset_val.json", 
+#     "./data/train/images")
 register_coco_instances(
     "xview_damage_assessment_instance_segmentation_dataset_train", 
     {}, 
-    "xview_damage_assessment_instance_segmentation_dataset_train.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/xview_damage_assessment_instance_segmentation_dataset_train.json", 
+    "./data/original_train/images")
 register_coco_instances(
     "xview_damage_assessment_instance_segmentation_dataset_val", 
     {}, 
-    "xview_damage_assessment_instance_segmentation_dataset_val.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/xview_damage_assessment_instance_segmentation_dataset_val.json", 
+    "./data/original_train/images")
 register_coco_instances(
-    "xview_damage_assessment_semantic_segmentation_dataset_train", 
+    "combined_xview_damage_assessment_instance_segmentation_dataset_train", 
     {}, 
-    "xview_damage_assessment_semantic_segmentation_dataset_train.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_train.json", 
+    "./data/train/images")
 register_coco_instances(
-    "xview_damage_assessment_semantic_segmentation_dataset_val", 
+    "combined_xview_damage_assessment_instance_segmentation_dataset_val", 
     {}, 
-    "xview_damage_assessment_semantic_segmentation_dataset_val.json", 
-    "/home/ethanweber/Documents/xview/data/train/images")
+    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_val.json", 
+    "./data/train/images")
+# register_coco_instances(
+#     "xview_damage_assessment_semantic_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_train.json", 
+#     "./data/train/images")
+# register_coco_instances(
+#     "xview_damage_assessment_semantic_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_val.json", 
+#     "./data/train/images")
+register_coco_instances(
+    "inria_buildings_annotations", 
+    {}, 
+    "./datasets/inria_buildings_annotations.json", 
+    "./data/inria/train/images")
     
