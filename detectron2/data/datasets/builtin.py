@@ -18,6 +18,8 @@ To add new dataset, refer to the tutorial "docs/DATASETS.md".
 """
 
 import os
+import glob
+import random
 
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from .register_coco import register_coco_instances, register_coco_panoptic_separated
@@ -280,4 +282,37 @@ register_coco_instances(
     {}, 
     "./datasets/inria_buildings_annotations.json", 
     "./data/inria/train/images")
-    
+
+loc_filenames = sorted(glob.glob("./data/train/images/*"))
+loc_filenames_gt = sorted(glob.glob("./data/train_gt/*"))
+assert len(loc_filenames) > 0
+assert len(loc_filenames) == len(loc_filenames_gt)
+random.Random(4).shuffle(loc_filenames)
+random.Random(4).shuffle(loc_filenames_gt)
+loc_split_idx = int(0.99*len(loc_filenames))
+
+# Register for semantic segmentation.
+def get_localization_dicts(train_or_test):
+    def return_func():
+        dataset_dicts = []
+        if train_or_test == "train":
+            train_filenames = loc_filenames[0:loc_split_idx]
+            segmentation_filenames = loc_filenames_gt[0:loc_split_idx]
+        else:
+            train_filenames = loc_filenames[loc_split_idx:]
+            segmentation_filenames = loc_filenames_gt[loc_split_idx:]
+        image_id = 0
+        for train_filename, segmentation_filename in zip(train_filenames, segmentation_filenames):
+            record = {}
+            record["file_name"] = train_filename
+            record["height"] = 1024
+            record["width"] = 1024
+            record["image_id"] = image_id
+            record["sem_seg_file_name"] = segmentation_filename
+            image_id += 1
+            dataset_dicts.append(record)
+        return dataset_dicts
+    return return_func
+
+DatasetCatalog.register("xview_semantic_train", get_localization_dicts("train"))
+DatasetCatalog.register("xview_semantic_val", get_localization_dicts("val"))
