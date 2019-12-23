@@ -216,95 +216,131 @@ register_all_lvis()
 register_all_cityscapes()
 register_all_pascal_voc()
 
-# register custom datasets
-register_coco_instances(
-    "xview_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/xview_instance_segmentation_dataset_train.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "xview_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/xview_instance_segmentation_dataset_val.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "combined_xview_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/combined_xview_instance_segmentation_dataset_train.json", 
-    "./data/train/images")
-register_coco_instances(
-    "combined_xview_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/combined_xview_instance_segmentation_dataset_val.json", 
-    "./data/train/images")
+# # register custom datasets
 # register_coco_instances(
-#     "xview_semantic_segmentation_dataset_train", 
+#     "xview_instance_segmentation_dataset_train", 
 #     {}, 
-#     "./datasets/xview_semantic_segmentation_dataset_train.json", 
+#     "./datasets/xview_instance_segmentation_dataset_train.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "xview_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_instance_segmentation_dataset_val.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "combined_xview_instance_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/combined_xview_instance_segmentation_dataset_train.json", 
 #     "./data/train/images")
 # register_coco_instances(
-#     "xview_semantic_segmentation_dataset_val", 
+#     "combined_xview_instance_segmentation_dataset_val", 
 #     {}, 
-#     "./datasets/xview_semantic_segmentation_dataset_val.json", 
-#     "./data/train/images")
-register_coco_instances(
-    "xview_damage_assessment_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/xview_damage_assessment_instance_segmentation_dataset_train.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "xview_damage_assessment_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/xview_damage_assessment_instance_segmentation_dataset_val.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "combined_xview_damage_assessment_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_train.json", 
-    "./data/train/images")
-register_coco_instances(
-    "combined_xview_damage_assessment_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_val.json", 
-    "./data/train/images")
-# register_coco_instances(
-#     "xview_damage_assessment_semantic_segmentation_dataset_train", 
-#     {}, 
-#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_train.json", 
+#     "./datasets/combined_xview_instance_segmentation_dataset_val.json", 
 #     "./data/train/images")
 # register_coco_instances(
-#     "xview_damage_assessment_semantic_segmentation_dataset_val", 
+#     "xview_damage_assessment_instance_segmentation_dataset_train", 
 #     {}, 
-#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_val.json", 
+#     "./datasets/xview_damage_assessment_instance_segmentation_dataset_train.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "xview_damage_assessment_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_damage_assessment_instance_segmentation_dataset_val.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "combined_xview_damage_assessment_instance_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_train.json", 
 #     "./data/train/images")
-register_coco_instances(
-    "inria_buildings_annotations", 
-    {}, 
-    "./datasets/inria_buildings_annotations.json", 
-    "./data/inria/train/images")
+# register_coco_instances(
+#     "combined_xview_damage_assessment_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_val.json", 
+#     "./data/train/images")
+# register_coco_instances(
+#     "inria_buildings_annotations", 
+#     {}, 
+#     "./datasets/inria_buildings_annotations.json", 
+#     "./data/inria/train/images")
 
-loc_filenames = sorted(glob.glob("./data/train/images/*"))
-loc_filenames_gt = sorted(glob.glob("./data/train_gt/*"))
-assert len(loc_filenames) > 0
-assert len(loc_filenames) == len(loc_filenames_gt)
-random.Random(4).shuffle(loc_filenames)
-random.Random(4).shuffle(loc_filenames_gt)
-loc_split_idx = int(0.99*len(loc_filenames))
+# http://code.activestate.com/recipes/303060-group-a-list-into-sequential-n-tuples/
+def group(lst, n):
+    """group([0,3,4,10,2,3], 2) => [(0,3), (4,10), (2,3)]
+    
+    Group a list into consecutive n-tuples. Incomplete tuples are
+    discarded e.g.
+    
+    >>> group(range(10), 3)
+    [(0, 1, 2), (3, 4, 5), (6, 7, 8)]
+    """
+    return zip(*[lst[i::n] for i in range(n)])
+
+
+SPLIT_PERCENT = 0.97
+IMAGE_PATH = "./data/train/images/"
+IMAGE_PATH_GT = "./data/train_gt/"
+
+# each file corresponds to an image
+annotation_files = sorted(glob.glob("{}/*".format(IMAGE_PATH)))
+annotation_files_as_pairs = list(group(annotation_files, 2))
+random.Random(4).shuffle(annotation_files_as_pairs)
+index = int(SPLIT_PERCENT*len(annotation_files_as_pairs))
+# now create the lists
+pre_train_files = []
+pre_train_files_gt = []
+
+pre_val_files = []
+pre_val_files_gt = []
+
+post_train_files = []
+post_train_files_gt = []
+
+post_val_files = []
+post_val_files_gt = []
+
+for (post, pre) in annotation_files_as_pairs[0:index]:
+    pre_train_files.append(pre)
+    pre_train_files_gt.append(pre.replace(IMAGE_PATH, IMAGE_PATH_GT))
+    post_train_files.append(post)
+    post_train_files_gt.append(post.replace(IMAGE_PATH, IMAGE_PATH_GT))
+for (post, pre) in annotation_files_as_pairs[index:]:
+    pre_val_files.append(pre)
+    pre_val_files_gt.append(pre.replace(IMAGE_PATH, IMAGE_PATH_GT))
+    post_val_files.append(post)
+    post_val_files_gt.append(post.replace(IMAGE_PATH, IMAGE_PATH_GT))
+
+# loc_filenames = sorted(glob.glob("./data/train/images/*post*"))
+# loc_filenames_gt = sorted(glob.glob("./data/train_gt/*post*"))
+# assert len(loc_filenames) > 0
+# assert len(loc_filenames) == len(loc_filenames_gt)
+# random.Random(4).shuffle(loc_filenames)
+# random.Random(4).shuffle(loc_filenames_gt)
+# loc_split_idx = int(0.90*len(loc_filenames))
 
 # Register for semantic segmentation.
-def get_localization_dicts(train_or_test):
+def get_dicts(pre_or_post, train_or_test, input_folder=None):
     def return_func():
         dataset_dicts = []
         if train_or_test == "train":
-            train_filenames = loc_filenames[0:loc_split_idx]
-            segmentation_filenames = loc_filenames_gt[0:loc_split_idx]
+            if pre_or_post == "pre":
+                train_filenames = pre_train_files
+                segmentation_filenames = pre_train_files_gt
+            else:
+                train_filenames = post_train_files
+                segmentation_filenames = post_train_files_gt
         else:
-            train_filenames = loc_filenames[loc_split_idx:]
-            segmentation_filenames = loc_filenames_gt[loc_split_idx:]
+            if pre_or_post == "pre":
+                train_filenames = pre_val_files
+                segmentation_filenames = pre_val_files_gt
+            else:
+                train_filenames = post_val_files
+                segmentation_filenames = post_val_files_gt
         image_id = 0
         for train_filename, segmentation_filename in zip(train_filenames, segmentation_filenames):
             record = {}
             record["file_name"] = train_filename
+            if input_folder:
+                record["file_name"] = train_filename.replace(IMAGE_PATH, input_folder)
             record["height"] = 1024
             record["width"] = 1024
             record["image_id"] = image_id
@@ -314,5 +350,18 @@ def get_localization_dicts(train_or_test):
         return dataset_dicts
     return return_func
 
-DatasetCatalog.register("xview_semantic_train", get_localization_dicts("train"))
-DatasetCatalog.register("xview_semantic_val", get_localization_dicts("val"))
+# standard
+DatasetCatalog.register("xview_semantic_localization_train", get_dicts("pre", "train"))
+DatasetCatalog.register("xview_semantic_localization_val", get_dicts("pre", "val"))
+DatasetCatalog.register("xview_semantic_damage_train", get_dicts("post", "train"))
+DatasetCatalog.register("xview_semantic_damage_val", get_dicts("post", "val"))
+
+# merged color channels
+DatasetCatalog.register(
+    "xview_semantic_damage_pre_post_dark_train",
+    get_dicts("post", "train", input_folder="./data/train_pre_post/")
+)
+DatasetCatalog.register(
+    "xview_semantic_damage_pre_post_dark_val",
+    get_dicts("post", "val", input_folder="./data/train_pre_post/")
+)
