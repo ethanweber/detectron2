@@ -71,6 +71,7 @@ def get_evaluator(cfg, dataset_name, output_folder=None):
         evaluator_list.append(
             SemSegEvaluator(
                 dataset_name,
+                cfg,
                 distributed=True,
                 num_classes=cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
                 ignore_label=cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,

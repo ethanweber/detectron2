@@ -309,14 +309,6 @@ for (post, pre) in annotation_files_as_pairs[index:]:
     post_val_files.append(post)
     post_val_files_gt.append(post.replace(IMAGE_PATH, IMAGE_PATH_GT))
 
-# loc_filenames = sorted(glob.glob("./data/train/images/*post*"))
-# loc_filenames_gt = sorted(glob.glob("./data/train_gt/*post*"))
-# assert len(loc_filenames) > 0
-# assert len(loc_filenames) == len(loc_filenames_gt)
-# random.Random(4).shuffle(loc_filenames)
-# random.Random(4).shuffle(loc_filenames_gt)
-# loc_split_idx = int(0.90*len(loc_filenames))
-
 # Register for semantic segmentation.
 def get_dicts(pre_or_post, train_or_test, input_folder=None):
     def return_func():
@@ -345,6 +337,7 @@ def get_dicts(pre_or_post, train_or_test, input_folder=None):
             record["width"] = 1024
             record["image_id"] = image_id
             record["sem_seg_file_name"] = segmentation_filename
+            assert os.path.basename(train_filename) == os.path.basename(segmentation_filename)
             image_id += 1
             dataset_dicts.append(record)
         return dataset_dicts
@@ -365,3 +358,61 @@ DatasetCatalog.register(
     "xview_semantic_damage_pre_post_dark_val",
     get_dicts("post", "val", input_folder="./data/train_pre_post/")
 )
+
+def get_quad_dicts(pre_or_post, train_or_test, input_folder=None, gt_input_folder=None):
+    def return_func():
+        dataset_dicts = []
+        if train_or_test == "train":
+            if pre_or_post == "pre":
+                train_filenames = pre_train_files
+                segmentation_filenames = pre_train_files_gt
+            else:
+                train_filenames = post_train_files
+                segmentation_filenames = post_train_files_gt
+        else:
+            if pre_or_post == "pre":
+                train_filenames = pre_val_files
+                segmentation_filenames = pre_val_files_gt
+            else:
+                train_filenames = post_val_files
+                segmentation_filenames = post_val_files_gt
+        image_id = 0
+        for train_filename, segmentation_filename in zip(train_filenames, segmentation_filenames):
+            for suffix in ["_tl", "_tr", "_bl", "_br"]:
+                record = {}
+                record["file_name"] = train_filename
+                if input_folder:
+                    record["file_name"] = train_filename.replace(IMAGE_PATH, input_folder).replace(".png", "{}.png".format(suffix))
+                record["height"] = 512
+                record["width"] = 512
+                record["image_id"] = image_id
+                record["sem_seg_file_name"] = segmentation_filename
+                if gt_input_folder:
+                    record["sem_seg_file_name"] = segmentation_filename.replace(IMAGE_PATH_GT, gt_input_folder).replace(".png", "{}.png".format(suffix))
+                assert os.path.basename(train_filename) == os.path.basename(segmentation_filename)
+                image_id += 1
+                dataset_dicts.append(record)
+        return dataset_dicts
+    return return_func
+
+# quadrants
+DatasetCatalog.register(
+    "xview_semantic_localization_quad_train", 
+    get_quad_dicts("pre", "train", 
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_localization_quad_val", 
+    get_quad_dicts("pre", "val", 
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_damage_quad_train", 
+    get_quad_dicts("post", "train", 
+    input_folder="./data/aligned_pre_post_dark_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_damage_quad_val", 
+    get_quad_dicts("post", "val", 
+    input_folder="./data/aligned_pre_post_dark_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
