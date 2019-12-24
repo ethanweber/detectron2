@@ -64,19 +64,30 @@ class SemanticSegmentor(nn.Module):
                 per-pixel segmentation prediction.
         """
         images = [x["image"].to(self.device) for x in batched_inputs]
+        pre_images = [x["pre_image"].to(self.device) for x in batched_inputs]
         images = [self.normalizer(x) for x in images]
+        pre_images = [self.normalizer(x) for x in pre_images]
+        # print(images[0].shape)
+        images = [torch.cat((x, y), 0) for x, y in zip(images, pre_images)]
+        # print(images[0].shape)
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
-
         features = self.backbone(images.tensor)
 
         if "sem_seg" in batched_inputs[0]:
+            # TODO(ethan): here!
             targets = [x["sem_seg"].to(self.device) for x in batched_inputs]
             targets = ImageList.from_tensors(
                 targets, self.backbone.size_divisibility, self.sem_seg_head.ignore_value
             ).tensor
+
+            targets_localization = [x["sem_seg_localization"].to(self.device) for x in batched_inputs]
+            targets_localization = ImageList.from_tensors(
+                targets_localization, self.backbone.size_divisibility, self.sem_seg_head.ignore_value
+            ).tensor
         else:
             targets = None
-        results, losses = self.sem_seg_head(features, targets)
+            targets_localization = None
+        results, losses = self.sem_seg_head(features, targets, targets_localization)
 
         if self.training:
             return losses
@@ -150,7 +161,7 @@ class SemSegFPNHead(nn.Module):
         self.predictor = Conv2d(conv_dims, num_classes, kernel_size=1, stride=1, padding=0)
         weight_init.c2_msra_fill(self.predictor)
 
-    def forward(self, features, targets=None):
+    def forward(self, features, targets=None, targets_localization=None):
         for i, f in enumerate(self.in_features):
             if i == 0:
                 x = self.scale_heads[i](features[f])
@@ -161,8 +172,21 @@ class SemSegFPNHead(nn.Module):
 
         if self.training:
             losses = {}
+            values_1_to_4 = x[:,1:,:,:]
+            values_1_to_4_sum = values_1_to_4.sum(1, keepdim=True)
+            values_0 = x[:,:1,:,:]
+            buildings = torch.cat((values_0, values_1_to_4_sum), 1)
+            # print(buildings.shape)
+            # print(values_1_to_4.shape)
+            # print(values_1_to_4.sum(1, keepdim=True).shape)
+            # print(targets)
+            # print(targets.shape)
             losses["loss_sem_seg"] = (
                 F.cross_entropy(x, targets, reduction="mean", ignore_index=self.ignore_value)
+                * self.loss_weight
+            )
+            losses["loss_sem_seg_localization"] = (
+                F.cross_entropy(buildings, targets_localization, reduction="mean", ignore_index=self.ignore_value)
                 * self.loss_weight
             )
             return [], losses

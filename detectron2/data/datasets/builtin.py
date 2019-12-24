@@ -409,10 +409,10 @@ DatasetCatalog.register(
 DatasetCatalog.register(
     "xview_semantic_damage_quad_train", 
     get_quad_dicts("post", "train", 
-    input_folder="./data/aligned_pre_post_dark_quad/",
+    input_folder="./data/train_images_quad/",
     gt_input_folder="./data/train_gt_quad/"))
 DatasetCatalog.register(
     "xview_semantic_damage_quad_val", 
     get_quad_dicts("post", "val", 
-    input_folder="./data/aligned_pre_post_dark_quad/",
+    input_folder="./data/train_images_quad/",
     gt_input_folder="./data/train_gt_quad/"))

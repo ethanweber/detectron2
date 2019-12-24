@@ -76,6 +76,14 @@ class SemSegEvaluator(DatasetEvaluator):
                     os.path.basename(sem_seg_file_name)
                 )
             )
+            sem_seg_file_name_localization = sem_seg_file_name.replace("post", "pre")
+            shutil.copy(
+                sem_seg_file_name_localization, 
+                os.path.join(
+                    self._TARG_DIR, 
+                    os.path.basename(sem_seg_file_name_localization)
+                )
+            )
 
     def reset(self):
         self._conf_matrix = np.zeros((self._N, self._N), dtype=np.int64)
@@ -98,6 +106,13 @@ class SemSegEvaluator(DatasetEvaluator):
                 os.path.join(
                     self._PRED_DIR,
                     os.path.basename(input["file_name"])
+                ),
+                pred
+            )
+            cv2.imwrite(
+                os.path.join(
+                    self._PRED_DIR,
+                    os.path.basename(input["file_name"].replace("post", "pre"))
                 ),
                 pred
             )
