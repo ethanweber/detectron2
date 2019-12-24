@@ -18,6 +18,8 @@ To add new dataset, refer to the tutorial "docs/DATASETS.md".
 """
 
 import os
+import glob
+import random
 
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from .register_coco import register_coco_instances, register_coco_panoptic_separated
@@ -214,70 +216,203 @@ register_all_lvis()
 register_all_cityscapes()
 register_all_pascal_voc()
 
-# register custom datasets
-register_coco_instances(
-    "xview_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/xview_instance_segmentation_dataset_train.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "xview_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/xview_instance_segmentation_dataset_val.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "combined_xview_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/combined_xview_instance_segmentation_dataset_train.json", 
-    "./data/train/images")
-register_coco_instances(
-    "combined_xview_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/combined_xview_instance_segmentation_dataset_val.json", 
-    "./data/train/images")
+# # register custom datasets
 # register_coco_instances(
-#     "xview_semantic_segmentation_dataset_train", 
+#     "xview_instance_segmentation_dataset_train", 
 #     {}, 
-#     "./datasets/xview_semantic_segmentation_dataset_train.json", 
+#     "./datasets/xview_instance_segmentation_dataset_train.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "xview_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_instance_segmentation_dataset_val.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "combined_xview_instance_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/combined_xview_instance_segmentation_dataset_train.json", 
 #     "./data/train/images")
 # register_coco_instances(
-#     "xview_semantic_segmentation_dataset_val", 
+#     "combined_xview_instance_segmentation_dataset_val", 
 #     {}, 
-#     "./datasets/xview_semantic_segmentation_dataset_val.json", 
-#     "./data/train/images")
-register_coco_instances(
-    "xview_damage_assessment_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/xview_damage_assessment_instance_segmentation_dataset_train.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "xview_damage_assessment_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/xview_damage_assessment_instance_segmentation_dataset_val.json", 
-    "./data/original_train/images")
-register_coco_instances(
-    "combined_xview_damage_assessment_instance_segmentation_dataset_train", 
-    {}, 
-    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_train.json", 
-    "./data/train/images")
-register_coco_instances(
-    "combined_xview_damage_assessment_instance_segmentation_dataset_val", 
-    {}, 
-    "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_val.json", 
-    "./data/train/images")
-# register_coco_instances(
-#     "xview_damage_assessment_semantic_segmentation_dataset_train", 
-#     {}, 
-#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_train.json", 
+#     "./datasets/combined_xview_instance_segmentation_dataset_val.json", 
 #     "./data/train/images")
 # register_coco_instances(
-#     "xview_damage_assessment_semantic_segmentation_dataset_val", 
+#     "xview_damage_assessment_instance_segmentation_dataset_train", 
 #     {}, 
-#     "./datasets/xview_damage_assessment_semantic_segmentation_dataset_val.json", 
+#     "./datasets/xview_damage_assessment_instance_segmentation_dataset_train.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "xview_damage_assessment_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/xview_damage_assessment_instance_segmentation_dataset_val.json", 
+#     "./data/original_train/images")
+# register_coco_instances(
+#     "combined_xview_damage_assessment_instance_segmentation_dataset_train", 
+#     {}, 
+#     "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_train.json", 
 #     "./data/train/images")
-register_coco_instances(
-    "inria_buildings_annotations", 
-    {}, 
-    "./datasets/inria_buildings_annotations.json", 
-    "./data/inria/train/images")
+# register_coco_instances(
+#     "combined_xview_damage_assessment_instance_segmentation_dataset_val", 
+#     {}, 
+#     "./datasets/combined_xview_damage_assessment_instance_segmentation_dataset_val.json", 
+#     "./data/train/images")
+# register_coco_instances(
+#     "inria_buildings_annotations", 
+#     {}, 
+#     "./datasets/inria_buildings_annotations.json", 
+#     "./data/inria/train/images")
+
+# http://code.activestate.com/recipes/303060-group-a-list-into-sequential-n-tuples/
+def group(lst, n):
+    """group([0,3,4,10,2,3], 2) => [(0,3), (4,10), (2,3)]
     
+    Group a list into consecutive n-tuples. Incomplete tuples are
+    discarded e.g.
+    
+    >>> group(range(10), 3)
+    [(0, 1, 2), (3, 4, 5), (6, 7, 8)]
+    """
+    return zip(*[lst[i::n] for i in range(n)])
+
+
+SPLIT_PERCENT = 0.97
+IMAGE_PATH = "./data/train/images/"
+IMAGE_PATH_GT = "./data/train_gt/"
+
+# each file corresponds to an image
+annotation_files = sorted(glob.glob("{}/*".format(IMAGE_PATH)))
+annotation_files_as_pairs = list(group(annotation_files, 2))
+random.Random(4).shuffle(annotation_files_as_pairs)
+index = int(SPLIT_PERCENT*len(annotation_files_as_pairs))
+# now create the lists
+pre_train_files = []
+pre_train_files_gt = []
+
+pre_val_files = []
+pre_val_files_gt = []
+
+post_train_files = []
+post_train_files_gt = []
+
+post_val_files = []
+post_val_files_gt = []
+
+for (post, pre) in annotation_files_as_pairs[0:index]:
+    pre_train_files.append(pre)
+    pre_train_files_gt.append(pre.replace(IMAGE_PATH, IMAGE_PATH_GT))
+    post_train_files.append(post)
+    post_train_files_gt.append(post.replace(IMAGE_PATH, IMAGE_PATH_GT))
+for (post, pre) in annotation_files_as_pairs[index:]:
+    pre_val_files.append(pre)
+    pre_val_files_gt.append(pre.replace(IMAGE_PATH, IMAGE_PATH_GT))
+    post_val_files.append(post)
+    post_val_files_gt.append(post.replace(IMAGE_PATH, IMAGE_PATH_GT))
+
+# Register for semantic segmentation.
+def get_dicts(pre_or_post, train_or_test, input_folder=None):
+    def return_func():
+        dataset_dicts = []
+        if train_or_test == "train":
+            if pre_or_post == "pre":
+                train_filenames = pre_train_files
+                segmentation_filenames = pre_train_files_gt
+            else:
+                train_filenames = post_train_files
+                segmentation_filenames = post_train_files_gt
+        else:
+            if pre_or_post == "pre":
+                train_filenames = pre_val_files
+                segmentation_filenames = pre_val_files_gt
+            else:
+                train_filenames = post_val_files
+                segmentation_filenames = post_val_files_gt
+        image_id = 0
+        for train_filename, segmentation_filename in zip(train_filenames, segmentation_filenames):
+            record = {}
+            record["file_name"] = train_filename
+            if input_folder:
+                record["file_name"] = train_filename.replace(IMAGE_PATH, input_folder)
+            record["height"] = 1024
+            record["width"] = 1024
+            record["image_id"] = image_id
+            record["sem_seg_file_name"] = segmentation_filename
+            assert os.path.basename(train_filename) == os.path.basename(segmentation_filename)
+            image_id += 1
+            dataset_dicts.append(record)
+        return dataset_dicts
+    return return_func
+
+# standard
+DatasetCatalog.register("xview_semantic_localization_train", get_dicts("pre", "train"))
+DatasetCatalog.register("xview_semantic_localization_val", get_dicts("pre", "val"))
+DatasetCatalog.register("xview_semantic_damage_train", get_dicts("post", "train"))
+DatasetCatalog.register("xview_semantic_damage_val", get_dicts("post", "val"))
+
+# merged color channels
+DatasetCatalog.register(
+    "xview_semantic_damage_pre_post_dark_train",
+    get_dicts("post", "train", input_folder="./data/train_pre_post/")
+)
+DatasetCatalog.register(
+    "xview_semantic_damage_pre_post_dark_val",
+    get_dicts("post", "val", input_folder="./data/train_pre_post/")
+)
+
+def get_quad_dicts(pre_or_post, train_or_test, input_folder=None, gt_input_folder=None):
+    def return_func():
+        dataset_dicts = []
+        if train_or_test == "train":
+            if pre_or_post == "pre":
+                train_filenames = pre_train_files
+                segmentation_filenames = pre_train_files_gt
+            else:
+                train_filenames = post_train_files
+                segmentation_filenames = post_train_files_gt
+        else:
+            if pre_or_post == "pre":
+                train_filenames = pre_val_files
+                segmentation_filenames = pre_val_files_gt
+            else:
+                train_filenames = post_val_files
+                segmentation_filenames = post_val_files_gt
+        image_id = 0
+        for train_filename, segmentation_filename in zip(train_filenames, segmentation_filenames):
+            for suffix in ["_tl", "_tr", "_bl", "_br"]:
+                record = {}
+                record["file_name"] = train_filename
+                if input_folder:
+                    record["file_name"] = train_filename.replace(IMAGE_PATH, input_folder).replace(".png", "{}.png".format(suffix))
+                record["height"] = 512
+                record["width"] = 512
+                record["image_id"] = image_id
+                record["sem_seg_file_name"] = segmentation_filename
+                if gt_input_folder:
+                    record["sem_seg_file_name"] = segmentation_filename.replace(IMAGE_PATH_GT, gt_input_folder).replace(".png", "{}.png".format(suffix))
+                assert os.path.basename(train_filename) == os.path.basename(segmentation_filename)
+                image_id += 1
+                dataset_dicts.append(record)
+        return dataset_dicts
+    return return_func
+
+# quadrants
+DatasetCatalog.register(
+    "xview_semantic_localization_quad_train", 
+    get_quad_dicts("pre", "train", 
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_localization_quad_val", 
+    get_quad_dicts("pre", "val", 
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_damage_quad_train", 
+    get_quad_dicts("post", "train", 
+    input_folder="./data/aligned_pre_post_dark_quad/",
+    gt_input_folder="./data/train_gt_quad/"))
+DatasetCatalog.register(
+    "xview_semantic_damage_quad_val", 
+    get_quad_dicts("post", "val", 
+    input_folder="./data/aligned_pre_post_dark_quad/",
+    gt_input_folder="./data/train_gt_quad/"))

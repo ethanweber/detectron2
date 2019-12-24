@@ -4,6 +4,8 @@ import json
 import logging
 import numpy as np
 import os
+import cv2
+import shutil
 from collections import OrderedDict
 import PIL.Image as Image
 import pycocotools.mask as mask_util
@@ -21,7 +23,7 @@ class SemSegEvaluator(DatasetEvaluator):
     Evaluate semantic segmentation
     """
 
-    def __init__(self, dataset_name, distributed, num_classes, ignore_label=255, output_dir=None):
+    def __init__(self, dataset_name, cfg, distributed, num_classes, ignore_label=255, output_dir=None):
         """
         Args:
             dataset_name (str): name of the dataset to be evaluated.
@@ -54,6 +56,26 @@ class SemSegEvaluator(DatasetEvaluator):
             self._contiguous_id_to_dataset_id = {v: k for k, v in c2d.items()}
         except AttributeError:
             self._contiguous_id_to_dataset_id = None
+        
+        # Make the directories if needed.
+        self._PRED_DIR = os.path.join(cfg.OUTPUT_DIR, "PRED_DIR/")
+        self._TARG_DIR = os.path.join(cfg.OUTPUT_DIR, "TARG_DIR/")
+        self._OUT_FP = os.path.join(cfg.OUTPUT_DIR, "OUT_FP.json")
+        if not os.path.exists(self._PRED_DIR):
+            os.makedirs(self._PRED_DIR)
+        if not os.path.exists(self._TARG_DIR):
+            os.makedirs(self._TARG_DIR)
+
+        print("Writing val images to TARG_DIR: ", self._TARG_DIR)
+        for dataset_record in DatasetCatalog.get(dataset_name):
+            sem_seg_file_name = dataset_record["sem_seg_file_name"]
+            shutil.copy(
+                sem_seg_file_name, 
+                os.path.join(
+                    self._TARG_DIR, 
+                    os.path.basename(sem_seg_file_name)
+                )
+            )
 
     def reset(self):
         self._conf_matrix = np.zeros((self._N, self._N), dtype=np.int64)
@@ -72,6 +94,13 @@ class SemSegEvaluator(DatasetEvaluator):
         for input, output in zip(inputs, outputs):
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device)
             pred = np.array(output, dtype=np.int)
+            cv2.imwrite(
+                os.path.join(
+                    self._PRED_DIR,
+                    os.path.basename(input["file_name"])
+                ),
+                pred
+            )
             with PathManager.open(self.input_file_to_gt_file[input["file_name"]], "rb") as f:
                 gt = np.array(Image.open(f), dtype=np.int)
 
@@ -137,6 +166,14 @@ class SemSegEvaluator(DatasetEvaluator):
             with PathManager.open(file_path, "wb") as f:
                 torch.save(res, f)
         results = OrderedDict({"sem_seg": res})
+
+        # Now run the eval script.
+        os.system("python metrics/xview2_metrics.py {} {} {}".format(self._PRED_DIR, self._TARG_DIR, self._OUT_FP))
+
+        with open(self._OUT_FP, 'r') as f:
+            xview_results_dict = json.load(f)
+        results["xview_results"] = xview_results_dict
+
         self._logger.info(results)
         return results
 

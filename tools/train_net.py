@@ -58,41 +58,16 @@ class Trainer(DefaultTrainer):
         if output_folder is None:
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
         evaluator_list = []
-        # TODO(ethan): maybe make this more configurable instead
-        # of always adding xview evaluator
-        evaluator_list.append(XviewEvaluator(dataset_name, cfg))
-        evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
-        if evaluator_type in ["sem_seg", "coco_panoptic_seg"]:
-            evaluator_list.append(
-                SemSegEvaluator(
-                    dataset_name,
-                    distributed=True,
-                    num_classes=cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
-                    ignore_label=cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-                    output_dir=output_folder,
-                )
+        evaluator_list.append(
+            SemSegEvaluator(
+                dataset_name,
+                cfg,
+                distributed=True,
+                num_classes=cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
+                ignore_label=cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
+                output_dir=output_folder,
             )
-        if evaluator_type in ["coco", "coco_panoptic_seg"]:
-            evaluator_list.append(COCOEvaluator(dataset_name, cfg, True, output_folder))
-        if evaluator_type == "coco_panoptic_seg":
-            evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
-        elif evaluator_type == "cityscapes":
-            assert (
-                torch.cuda.device_count() >= comm.get_rank()
-            ), "CityscapesEvaluator currently do not work with multiple machines."
-            return CityscapesEvaluator(dataset_name)
-        elif evaluator_type == "pascal_voc":
-            return PascalVOCDetectionEvaluator(dataset_name)
-        elif evaluator_type == "lvis":
-            return LVISEvaluator(dataset_name, cfg, True, output_folder)
-        if len(evaluator_list) == 0:
-            raise NotImplementedError(
-                "no Evaluator for the dataset {} with the type {}".format(
-                    dataset_name, evaluator_type
-                )
-            )
-        elif len(evaluator_list) == 1:
-            return evaluator_list[0]
+        )
         return DatasetEvaluators(evaluator_list)
 
     @classmethod
