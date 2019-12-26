@@ -195,11 +195,11 @@ class SemSegFPNHead(nn.Module):
             # print(targets.shape)
             losses["loss_sem_seg"] = (
                 F.cross_entropy(x, targets, reduction="mean", ignore_index=self.ignore_value)
-                * self.loss_weight
+                * self.loss_weight * 1.3
             )
             losses["loss_sem_seg_localization"] = (
                 F.cross_entropy(buildings, targets_localization, reduction="mean", ignore_index=self.ignore_value)
-                * self.loss_weight
+                * self.loss_weight * 0.7
             )
             return [], losses
         else:
