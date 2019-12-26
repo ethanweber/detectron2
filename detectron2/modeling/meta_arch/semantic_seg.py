@@ -68,10 +68,20 @@ class SemanticSegmentor(nn.Module):
         images = [self.normalizer(x) for x in images]
         pre_images = [self.normalizer(x) for x in pre_images]
         # print(images[0].shape)
-        images = [torch.cat((x, y), 0) for x, y in zip(images, pre_images)]
+        # images = [torch.cat((x, y), 0) for x, y in zip(images, pre_images)]
         # print(images[0].shape)
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        pre_images = ImageList.from_tensors(pre_images, self.backbone.size_divisibility)
         features = self.backbone(images.tensor)
+        pre_features = self.backbone(pre_images.tensor)
+        for key in features.keys():
+            # print("before")
+            # print(features[key].shape)
+            features[key] = torch.cat((features[key], pre_features[key]), 1)
+            # print(features[key].shape)
+        # print(type(features))
+        # print(features.keys())
+        # print(features["p2"].shape)
 
         if "sem_seg" in batched_inputs[0]:
             # TODO(ethan): here!
@@ -126,7 +136,7 @@ class SemSegFPNHead(nn.Module):
         feature_channels      = {k: v.channels for k, v in input_shape.items()}
         self.ignore_value     = cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE
         num_classes           = cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES
-        conv_dims             = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM
+        conv_dims             = 512 # cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM
         self.common_stride    = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
         norm                  = cfg.MODEL.SEM_SEG_HEAD.NORM
         self.loss_weight      = cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT
@@ -134,6 +144,8 @@ class SemSegFPNHead(nn.Module):
 
         self.scale_heads = []
         for in_feature in self.in_features:
+            # print(self.common_stride)
+            # raise ValueError("stop")
             head_ops = []
             head_length = max(
                 1, int(np.log2(feature_strides[in_feature]) - np.log2(self.common_stride))
@@ -141,7 +153,7 @@ class SemSegFPNHead(nn.Module):
             for k in range(head_length):
                 norm_module = nn.GroupNorm(32, conv_dims) if norm == "GN" else None
                 conv = Conv2d(
-                    feature_channels[in_feature] if k == 0 else conv_dims,
+                    conv_dims, # feature_channels[in_feature] if k == 0 else conv_dims,
                     conv_dims,
                     kernel_size=3,
                     stride=1,

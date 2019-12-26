@@ -299,7 +299,7 @@ class BasicStem(nn.Module):
         """
         super().__init__()
         self.conv1 = Conv2d(
-            6, # in_channels,
+            in_channels,
             out_channels,
             kernel_size=7,
             stride=2,
