@@ -193,14 +193,16 @@ class SemSegFPNHead(nn.Module):
             # print(values_1_to_4.sum(1, keepdim=True).shape)
             # print(targets)
             # print(targets.shape)
+            w_damage = torch.Tensor([1.0, 1.5, 2.0, 2.5, 3.0]).cuda()
+            w_localization = torch.Tensor([1.0, 17.0]).cuda()
             losses["loss_sem_seg"] = (
-                F.cross_entropy(x, targets, reduction="mean", ignore_index=self.ignore_value)
-                * self.loss_weight * 1.3
+                F.cross_entropy(torch.clamp(x,1e-10,1.0), targets, weight=w_damage, reduction="mean", ignore_index=self.ignore_value)
+                * self.loss_weight
             )
-            losses["loss_sem_seg_localization"] = (
-                F.cross_entropy(buildings, targets_localization, reduction="mean", ignore_index=self.ignore_value)
-                * self.loss_weight * 0.7
-            )
+            #losses["loss_sem_seg_localization"] = (
+            #    F.cross_entropy(torch.clamp(buildings,1e-10,1.0), targets_localization, weight=w_localization, reduction="mean", ignore_index=self.ignore_value)
+            #    * self.loss_weight
+            #)
             return [], losses
         else:
             return x, {}
