@@ -118,7 +118,6 @@ def build_sem_seg_head(cfg, input_shape):
     name = cfg.MODEL.SEM_SEG_HEAD.NAME
     return SEM_SEG_HEADS_REGISTRY.get(name)(cfg, input_shape)
 
-
 @SEM_SEG_HEADS_REGISTRY.register()
 class SemSegFPNHead(nn.Module):
     """
@@ -193,16 +192,17 @@ class SemSegFPNHead(nn.Module):
             # print(values_1_to_4.sum(1, keepdim=True).shape)
             # print(targets)
             # print(targets.shape)
-            w_damage = torch.Tensor([1.0, 1.5, 2.0, 2.5, 3.0]).cuda()
-            w_localization = torch.Tensor([1.0, 17.0]).cuda()
+            # w_damage = torch.Tensor([1.0, 46.0, 412.0, 393.0, 594.0]).cuda()
+            w_damage = torch.Tensor([1.0, 2.0, 3.0, 4.0, 5.0]).cuda()
+            # w_localization = torch.Tensor([1.0, 1.0]).cuda()
             losses["loss_sem_seg"] = (
                 F.cross_entropy(torch.clamp(x,1e-10,1.0), targets, weight=w_damage, reduction="mean", ignore_index=self.ignore_value)
                 * self.loss_weight
             )
-            #losses["loss_sem_seg_localization"] = (
+            # losses["loss_sem_seg_localization"] = (
             #    F.cross_entropy(torch.clamp(buildings,1e-10,1.0), targets_localization, weight=w_localization, reduction="mean", ignore_index=self.ignore_value)
             #    * self.loss_weight
-            #)
+            # )
             return [], losses
         else:
             return x, {}
