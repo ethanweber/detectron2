@@ -73,6 +73,8 @@ class DatasetMapper:
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         # USER: Write your own image loading if it's not from a file
         # print(dataset_dict["file_name"])
+        pre_image_filename = dataset_dict["file_name"].replace("post", "pre")
+        pre_image = utils.read_image(pre_image_filename, format=self.img_format)
         image = utils.read_image(dataset_dict["file_name"], format=self.img_format)
         utils.check_image_size(dataset_dict, image)
 
@@ -94,13 +96,18 @@ class DatasetMapper:
             if self.crop_gen:
                 transforms = crop_tfm + transforms
 
+        pre_image = transforms.apply_image(pre_image)
         image_shape = image.shape[:2]  # h, w
+
+        # concat pre_image and image
+        # image = np.concatenate((image, pre_image), axis=2)
 
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
         dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
         # Can use uint8 if it turns out to be slow some day
+        dataset_dict["pre_image"] = torch.as_tensor(pre_image.transpose(2, 0, 1).astype("float32"))
 
         # USER: Remove if you don't use pre-computed proposals.
         if self.load_proposals:
@@ -139,10 +146,20 @@ class DatasetMapper:
 
         # USER: Remove if you don't do semantic/panoptic segmentation.
         if "sem_seg_file_name" in dataset_dict:
-            with PathManager.open(dataset_dict.pop("sem_seg_file_name"), "rb") as f:
+            sem_seg_file_name = dataset_dict.pop("sem_seg_file_name")
+            sem_seg_file_name_localization = sem_seg_file_name.replace("post", "pre")
+            with PathManager.open(sem_seg_file_name, "rb") as f:
                 sem_seg_gt = Image.open(f)
                 sem_seg_gt = np.asarray(sem_seg_gt, dtype="uint8")
+            with PathManager.open(sem_seg_file_name_localization, "rb") as f:
+                sem_seg_gt_localization = Image.open(f)
+                sem_seg_gt_localization = np.asarray(sem_seg_gt_localization, dtype="uint8")
+            
             sem_seg_gt = transforms.apply_segmentation(sem_seg_gt)
             sem_seg_gt = torch.as_tensor(sem_seg_gt.astype("long"))
             dataset_dict["sem_seg"] = sem_seg_gt
+
+            sem_seg_gt_localization = transforms.apply_segmentation(sem_seg_gt_localization)
+            sem_seg_gt_localization = torch.as_tensor(sem_seg_gt_localization.astype("long"))
+            dataset_dict["sem_seg_localization"] = sem_seg_gt_localization
         return dataset_dict

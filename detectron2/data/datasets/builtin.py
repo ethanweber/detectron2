@@ -400,19 +400,19 @@ DatasetCatalog.register(
     "xview_semantic_localization_quad_train", 
     get_quad_dicts("pre", "train", 
     input_folder="./data/train_images_quad/",
-    gt_input_folder="./data/train_gt_quad/"))
+    gt_input_folder="./data/train_and_tier3_GT_masks_quad/"))
 DatasetCatalog.register(
     "xview_semantic_localization_quad_val", 
     get_quad_dicts("pre", "val", 
     input_folder="./data/train_images_quad/",
-    gt_input_folder="./data/train_gt_quad/"))
+    gt_input_folder="./data/train_and_tier3_GT_masks_quad/"))
 DatasetCatalog.register(
     "xview_semantic_damage_quad_train", 
     get_quad_dicts("post", "train", 
-    input_folder="./data/aligned_pre_post_dark_quad/",
-    gt_input_folder="./data/train_gt_quad/"))
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_and_tier3_GT_masks_quad/"))
 DatasetCatalog.register(
     "xview_semantic_damage_quad_val", 
     get_quad_dicts("post", "val", 
-    input_folder="./data/aligned_pre_post_dark_quad/",
-    gt_input_folder="./data/train_gt_quad/"))
+    input_folder="./data/train_images_quad/",
+    gt_input_folder="./data/train_and_tier3_GT_masks_quad/"))

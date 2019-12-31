@@ -64,19 +64,40 @@ class SemanticSegmentor(nn.Module):
                 per-pixel segmentation prediction.
         """
         images = [x["image"].to(self.device) for x in batched_inputs]
+        pre_images = [x["pre_image"].to(self.device) for x in batched_inputs]
         images = [self.normalizer(x) for x in images]
+        pre_images = [self.normalizer(x) for x in pre_images]
+        # print(images[0].shape)
+        # images = [torch.cat((x, y), 0) for x, y in zip(images, pre_images)]
+        # print(images[0].shape)
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
-
+        pre_images = ImageList.from_tensors(pre_images, self.backbone.size_divisibility)
         features = self.backbone(images.tensor)
+        pre_features = self.backbone(pre_images.tensor)
+        for key in features.keys():
+            # print("before")
+            # print(features[key].shape)
+            features[key] = torch.cat((features[key], pre_features[key]), 1)
+            # print(features[key].shape)
+        # print(type(features))
+        # print(features.keys())
+        # print(features["p2"].shape)
 
         if "sem_seg" in batched_inputs[0]:
+            # TODO(ethan): here!
             targets = [x["sem_seg"].to(self.device) for x in batched_inputs]
             targets = ImageList.from_tensors(
                 targets, self.backbone.size_divisibility, self.sem_seg_head.ignore_value
             ).tensor
+
+            targets_localization = [x["sem_seg_localization"].to(self.device) for x in batched_inputs]
+            targets_localization = ImageList.from_tensors(
+                targets_localization, self.backbone.size_divisibility, self.sem_seg_head.ignore_value
+            ).tensor
         else:
             targets = None
-        results, losses = self.sem_seg_head(features, targets)
+            targets_localization = None
+        results, losses = self.sem_seg_head(features, targets, targets_localization)
 
         if self.training:
             return losses
@@ -97,7 +118,6 @@ def build_sem_seg_head(cfg, input_shape):
     name = cfg.MODEL.SEM_SEG_HEAD.NAME
     return SEM_SEG_HEADS_REGISTRY.get(name)(cfg, input_shape)
 
-
 @SEM_SEG_HEADS_REGISTRY.register()
 class SemSegFPNHead(nn.Module):
     """
@@ -115,7 +135,7 @@ class SemSegFPNHead(nn.Module):
         feature_channels      = {k: v.channels for k, v in input_shape.items()}
         self.ignore_value     = cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE
         num_classes           = cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES
-        conv_dims             = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM
+        conv_dims             = 512 # cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM
         self.common_stride    = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
         norm                  = cfg.MODEL.SEM_SEG_HEAD.NORM
         self.loss_weight      = cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT
@@ -123,6 +143,8 @@ class SemSegFPNHead(nn.Module):
 
         self.scale_heads = []
         for in_feature in self.in_features:
+            # print(self.common_stride)
+            # raise ValueError("stop")
             head_ops = []
             head_length = max(
                 1, int(np.log2(feature_strides[in_feature]) - np.log2(self.common_stride))
@@ -130,7 +152,7 @@ class SemSegFPNHead(nn.Module):
             for k in range(head_length):
                 norm_module = nn.GroupNorm(32, conv_dims) if norm == "GN" else None
                 conv = Conv2d(
-                    feature_channels[in_feature] if k == 0 else conv_dims,
+                    conv_dims, # feature_channels[in_feature] if k == 0 else conv_dims,
                     conv_dims,
                     kernel_size=3,
                     stride=1,
@@ -150,7 +172,7 @@ class SemSegFPNHead(nn.Module):
         self.predictor = Conv2d(conv_dims, num_classes, kernel_size=1, stride=1, padding=0)
         weight_init.c2_msra_fill(self.predictor)
 
-    def forward(self, features, targets=None):
+    def forward(self, features, targets=None, targets_localization=None):
         for i, f in enumerate(self.in_features):
             if i == 0:
                 x = self.scale_heads[i](features[f])
@@ -161,10 +183,26 @@ class SemSegFPNHead(nn.Module):
 
         if self.training:
             losses = {}
+            values_1_to_4 = x[:,1:,:,:]
+            values_1_to_4_sum = values_1_to_4.sum(1, keepdim=True)
+            values_0 = x[:,:1,:,:]
+            buildings = torch.cat((values_0, values_1_to_4_sum), 1)
+            # print(buildings.shape)
+            # print(values_1_to_4.shape)
+            # print(values_1_to_4.sum(1, keepdim=True).shape)
+            # print(targets)
+            # print(targets.shape)
+            # w_damage = torch.Tensor([1.0, 46.0, 412.0, 393.0, 594.0]).cuda()
+            w_damage = torch.Tensor([1.0, 2.0, 3.0, 4.0, 5.0]).cuda()
+            # w_localization = torch.Tensor([1.0, 1.0]).cuda()
             losses["loss_sem_seg"] = (
-                F.cross_entropy(x, targets, reduction="mean", ignore_index=self.ignore_value)
+                F.cross_entropy(torch.clamp(x,1e-10,1.0), targets, weight=w_damage, reduction="mean", ignore_index=self.ignore_value)
                 * self.loss_weight
             )
+            # losses["loss_sem_seg_localization"] = (
+            #    F.cross_entropy(torch.clamp(buildings,1e-10,1.0), targets_localization, weight=w_localization, reduction="mean", ignore_index=self.ignore_value)
+            #    * self.loss_weight
+            # )
             return [], losses
         else:
             return x, {}
